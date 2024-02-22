@@ -1,7 +1,6 @@
 from classes.users import AuthenticatorConfigurator
 import streamlit_authenticator as stauth
 import streamlit as st
-import pandas as pd
 import time
 
 auth_configurator = AuthenticatorConfigurator()
@@ -20,7 +19,7 @@ authenticator = stauth.Authenticate(
     cookie_config['expiry_days']
 )
 
-authenticator.login()
+authenticator.login('Login')
 
 if st.session_state["authentication_status"]:
     authenticator.logout()
@@ -37,5 +36,14 @@ elif st.session_state["authentication_status"] is None:
     time.sleep(1.2)
     warning_message.empty()
 
-with st.form("Registration_form", clear_on_submit=True):
-    st.subheader("Register")
+with st.form("Registrační formulář"):
+    st.header("Register")
+    username = st.text_input("Uživatelské jméno")
+    name = st.text_input("Jméno")
+    email = st.text_input("Email")
+    password = st.text_input("Heslo", type="password")
+    user_type = st.selectbox("Vyberte typ uživatele", ["Customer", "Agency", "Worker"])
+    submit_button = st.form_submit_button("Registrovat")
+
+    if submit_button:
+        auth_configurator.register_user(username, name, email, password, user_type, submit_button)
