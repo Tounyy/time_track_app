@@ -52,5 +52,10 @@ elif navigation_choice == "Register":
 
 elif navigation_choice == "Authenticated":
     authenticator.logout("Logout")
-    st.write(f'Welcome *{st.session_state["name"]}*')
-    st.title('Some content')
+    username = st.session_state.get("username")
+    if username:
+        auth_configurator.display_user_info(username)
+    else:
+        info = st.info("Nebylo možné načíst informace o uživateli.")
+        time.sleep(1.2)
+        info.empty()
