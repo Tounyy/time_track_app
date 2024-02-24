@@ -19,31 +19,38 @@ authenticator = stauth.Authenticate(
     cookie_config['expiry_days']
 )
 
-authenticator.login('Login')
+if not st.session_state.get("authentication_status"):
+    navigation_choice = st.sidebar.selectbox("Navigace", ["Login", "Register"])
+else:
+    navigation_choice = "Authenticated"
 
-if st.session_state["authentication_status"]:
-    authenticator.logout()
+if navigation_choice == "Login":
+    login_status = authenticator.login('Login')
+
+    if st.session_state.get("authentication_status") is False:
+        warning_message = st.warning('Uživatelské jméno/heslo je nesprávné nebo je prázdné')
+        time.sleep(1.2)
+        warning_message.empty()
+    
+    elif st.session_state.get("authentication_status") is None:
+        info = st.info('Zadejte prosím své uživatelské jméno a heslo.')
+        time.sleep(1.2)
+        info.empty()
+
+elif navigation_choice == "Register":
+    with st.form("Registrační formulář", clear_on_submit=True):
+        st.header("Registrace")
+        username = st.text_input("Uživatelské jméno")
+        name = st.text_input("Jméno")
+        email = st.text_input("Email")
+        password = st.text_input("Heslo", type="password")
+        user_type = st.selectbox("Vyberte typ uživatele", ["Customer", "Agency", "Worker"])
+        submit_button = st.form_submit_button("Registrovat")
+        
+        if submit_button:
+            registration_success = auth_configurator.register_user(username, name, email, password, user_type, submit_button)
+
+elif navigation_choice == "Authenticated":
+    authenticator.logout("Logout")
     st.write(f'Welcome *{st.session_state["name"]}*')
     st.title('Some content')
-
-elif st.session_state["authentication_status"] is False:
-    warning_message = st.warning('Uživatelské jméno/heslo je nesprávné nebo je prázdné')
-    time.sleep(1.2)
-    warning_message.empty()
-
-elif st.session_state["authentication_status"] is None:
-    warning_message = st.warning('Zadejte prosím své uživatelské jméno a heslo.')
-    time.sleep(1.2)
-    warning_message.empty()
-
-with st.form("Registrační formulář"):
-    st.header("Register")
-    username = st.text_input("Uživatelské jméno")
-    name = st.text_input("Jméno")
-    email = st.text_input("Email")
-    password = st.text_input("Heslo", type="password")
-    user_type = st.selectbox("Vyberte typ uživatele", ["Customer", "Agency", "Worker"])
-    submit_button = st.form_submit_button("Registrovat")
-
-    if submit_button:
-        auth_configurator.register_user(username, name, email, password, user_type, submit_button)

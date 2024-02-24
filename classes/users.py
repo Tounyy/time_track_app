@@ -75,8 +75,10 @@ class AuthenticatorConfigurator:
                     hashed_passwords = stauth.Hasher([password]).generate()
                     insert_user_query = """INSERT INTO public."user" ("Username", "Name", "Type_User", "Password", "Email", "Registration_Date") 
                     VALUES (%s, %s, %s, %s, %s, %s);"""
-                    cursor.execute(insert_user_query, (username, name, user_type, hashed_passwords[0], email, registration_date))
-                    st.success('Registrace uživatele proběhla úspěšně')
+                    cursor.execute(insert_user_query, (username, name, user_type, hashed_passwords[0], email, registration_date))                
+                    success = st.success("Registrace proběhla úspěšně. Nyní se můžete přihlásit.")
+                    time.sleep(1.2)
+                    success.empty()
             finally:
                 cursor.close()
                 connection.close()
