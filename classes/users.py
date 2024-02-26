@@ -24,8 +24,8 @@ class AuthenticatorConfigurator:
 
         return user_credentials
     
-    def register_user(self, username, name, email, password, user_type, submit_button):
-        if submit_button:
+    def register_user(self, username, name, email, password, user_type, submit_button_register):
+        if submit_button_register:
             connection = self.db.create_connection()
             cursor = connection.cursor()
             try:
@@ -85,9 +85,8 @@ class AuthenticatorConfigurator:
                 connection.close()
 
     def get_user_type(self, username):
-        db = Database()
         select_query = "SELECT \"ID\", \"Username\", \"Name\", \"Type_User\", \"Password\", \"Email\", \"Registration_Date\" FROM public.\"user\""
-        user_data = db.get_request(select_query)
+        user_data = self.db.get_request(select_query)
         
         column_names = ["ID", "Username", "Name", "Type_User", "Password", "Email", "Registration_Date"]
         user_df = pd.DataFrame(user_data, columns=column_names)
