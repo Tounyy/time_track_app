@@ -84,19 +84,16 @@ class AuthenticatorConfigurator:
                 cursor.close()
                 connection.close()
 
-    def display_user_info(self, username):
-        with self.db.create_connection() as connection:
-            with connection.cursor() as cursor:
-                select_query = "SELECT * FROM public.\"user\""
-                cursor.execute(select_query)
-                user_data = cursor.fetchall()
-                column_names = ["ID", "Username", "Name", "Type_User", "Password", "Email", "Registration_Date"]
-                user_df = pd.DataFrame(user_data, columns=column_names)
-                user_df["Username_lower"] = user_df["Username"].str.lower()
+    def get_user_type(self, username):
+        db = Database()
+        select_query = "SELECT \"ID\", \"Username\", \"Name\", \"Type_User\", \"Password\", \"Email\", \"Registration_Date\" FROM public.\"user\""
+        user_data = db.get_request(select_query)
+        
+        column_names = ["ID", "Username", "Name", "Type_User", "Password", "Email", "Registration_Date"]
+        user_df = pd.DataFrame(user_data, columns=column_names)
+        user_df["Username_lower"] = user_df["Username"].str.lower()
 
-                if (user_df["Username_lower"] == username.lower()).any():
-                    user_type = user_df.loc[user_df["Username_lower"] == username.lower(), "Type_User"].values[0]
-                    st.write(f"Username: {username}")
-                    st.write(f"Type user: {user_type}")
-                else:
-                    st.write("Uživatel nebyl nalezen")
+        if (user_df["Username_lower"] == username.lower()).any():
+            return user_df.loc[user_df["Username_lower"] == username.lower(), "Type_User"].values[0]
+        else:
+            return None

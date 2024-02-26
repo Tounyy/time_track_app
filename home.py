@@ -25,7 +25,7 @@ else:
     navigation_choice = "Authenticated"
 
 if navigation_choice == "Login":
-    login_status = authenticator.login('Login')
+    name, authentication_status, username = authenticator.login("Login", "main")
 
     if st.session_state.get("authentication_status") is False:
         warning_message = st.warning('Uživatelské jméno/heslo je nesprávné nebo je prázdné')
@@ -36,6 +36,10 @@ if navigation_choice == "Login":
         info = st.info('Zadejte prosím své uživatelské jméno a heslo.')
         time.sleep(1.2)
         info.empty()
+
+    if authentication_status:
+        st.session_state["authentication_status"] = authentication_status
+        st.session_state["username"] = username
 
 elif navigation_choice == "Register":
     with st.form("Registrační formulář", clear_on_submit=True):
@@ -51,11 +55,17 @@ elif navigation_choice == "Register":
             registration_success = auth_configurator.register_user(username, name, email, password, user_type, submit_button)
 
 elif navigation_choice == "Authenticated":
+    if st.session_state.get("authentication_status"):
+        username = st.session_state.get("username")
+    user_type = auth_configurator.get_user_type(username)
+
+    if user_type == 'Agency' or user_type == 'Customer':
+        tab1, tab2, tab3, tab4 = st.tabs(["Přidat task", "Confirmation task", "Smazat task", "Zobrazit tabulku s časem"])
+
+    with tab1:
+        with st.form("Add_task_form", clear_on_submit=True):
+            st.subheader("Přidat task")
+
     authenticator.logout("Logout")
-    username = st.session_state.get("username")
-    if username:
-        auth_configurator.display_user_info(username)
-    else:
-        info = st.info("Nebylo možné načíst informace o uživateli.")
-        time.sleep(1.2)
-        info.empty()
+    st.write(username)
+    st.write(user_type)
