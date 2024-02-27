@@ -17,7 +17,7 @@ class TaskRequests:
             self.user_type = None
 
     def task_exists_for_user_type(self, task_name, user_type):
-        check_user_type_query = "SELECT COUNT(*) FROM public.tasks WHERE \"Tasks\" = %s AND \"User_type_input_task\" = %s;"
+        check_user_type_query = "SELECT COUNT(*) FROM public.tasks WHERE \"tasks\" = %s AND \"user_type_input_task\" = %s;"
         result = self.db.get_request(check_user_type_query, (task_name, user_type))
         if result:
             count = result[0][0] 
@@ -25,7 +25,7 @@ class TaskRequests:
         return False
             
     def task_exists_for_other_user_type(self, task_name, user_type):
-        check_other_user_type_query = "SELECT COUNT(*) FROM public.tasks WHERE \"Tasks\" = %s AND \"User_type_input_task\" != %s;"
+        check_other_user_type_query = "SELECT COUNT(*) FROM public.tasks WHERE \"tasks\" = %s AND \"user_type_input_task\" != %s;"
         result = self.db.get_request(check_other_user_type_query, (task_name, user_type))
         if result:
             count = result[0][0]  
@@ -46,7 +46,7 @@ class TaskRequests:
             time.sleep(2)
             error_mess.empty()
         else:
-            insert_query = "INSERT INTO public.tasks (\"Tasks\", \"MD\", \"Currency\", \"User\", \"User_type_input_task\") VALUES (%s, %s, %s, %s, %s);"
+            insert_query = "INSERT INTO public.tasks (\"tasks\", \"md\", \"currency\", \"user\", \"user_type_input_task\") VALUES (%s, %s, %s, %s, %s);"
             self.db.execute_query(insert_query, (task_name, money_md, selected_currency, self.username, self.user_type))
             return f"Úkol '{task_name}' byl úspěšně uložen do databáze."
 
@@ -57,7 +57,7 @@ class TaskRequests:
     def process_tasks_for_confirmation(self, user_type):
         tasks_data = self.fetch_tasks()
         tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "Tracking_time_tasks", "Start_time_of_tracking", "Stop_time_of_tracking", "User", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
-        
+
         if user_type == 'Agency':
             available_tasks = tasks_df.loc[tasks_df["Agency_input_task"] != 'confirm', "Task"]
         elif user_type == 'Customer':
@@ -68,7 +68,7 @@ class TaskRequests:
     def process_tasks_for_remove_confirmation(self, user_type):
         tasks_data = self.fetch_tasks()
         tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "Tracking_time_tasks", "Start_time_of_tracking", "Stop_time_of_tracking", "User", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
-        
+
         if user_type == 'Agency':
             available_tasks_2 = tasks_df.loc[tasks_df["Agency_input_task"] == 'confirm', "Task"]
         elif user_type == 'Customer':
@@ -78,16 +78,16 @@ class TaskRequests:
 
     def confirm_task(self, task_name, user_type):
         if user_type == 'Agency':
-            update_query = "UPDATE public.tasks SET \"Agency_input_task\" = 'confirm' WHERE \"Tasks\" = %s;"
+            update_query = "UPDATE public.tasks SET \"agency_input_task\" = 'confirm' WHERE \"tasks\" = %s;"
         elif user_type == 'Customer':
-            update_query = "UPDATE public.tasks SET \"Customer_input_task\" = 'confirm' WHERE \"Tasks\" = %s;"
+            update_query = "UPDATE public.tasks SET \"customer_input_task\" = 'confirm' WHERE \"tasks\" = %s;"
         self.db.execute_query(update_query, (task_name,))
 
     def remove_confirmation(self, task_name, user_type):
         if user_type == 'Agency':
-            update_query = "UPDATE public.tasks SET \"Agency_input_task\" = NULL WHERE \"Tasks\" = %s;"
+            update_query = "UPDATE public.tasks SET \"agency_input_task\" = NULL WHERE \"tasks\" = %s;"
         elif user_type == 'Customer':
-            update_query = "UPDATE public.tasks SET \"Customer_input_task\" = NULL WHERE \"Tasks\" = %s;"
+            update_query = "UPDATE public.tasks SET \"customer_input_task\" = NULL WHERE \"tasks\" = %s;"
         self.db.execute_query(update_query, (task_name,))
     
     def get_user_tasks(self, username):
@@ -107,7 +107,7 @@ class TaskRequests:
     
     def delete_task(self, selected_task, delete_button):
         if delete_button and selected_task:  
-            delete_query = "DELETE FROM tasks WHERE \"Tasks\" = %s;"
+            delete_query = "DELETE FROM tasks WHERE \"tasks\" = %s;"
             self.db.execute_query(delete_query, (selected_task,))
             success = st.success(f"Úkol '{selected_task}' je smazán z databáze.")
             time.sleep(2)    

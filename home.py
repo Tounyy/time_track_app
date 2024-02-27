@@ -67,8 +67,8 @@ elif navigation_choice == "Authenticated":
     else:
         user_type = task_requests.user_type
 
-    if user_type == 'Agency' or user_type == 'Customer':
-        tab1, tab2, tab3, tab4 = st.tabs(["Přidat task", "Smazat task", "Potvrdit task", "Zobrazit tabulku s časem"])
+
+    tab1, tab2, tab3, tab4 = st.tabs(["Přidat task", "Smazat task", "Potvrdit task", "Zobrazit tabulku s časem"])
 
     with tab1:
         with st.form("Add_task_form", clear_on_submit=True):

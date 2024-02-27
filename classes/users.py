@@ -9,7 +9,7 @@ class AuthenticatorConfigurator:
         self.db = Database()
 
     def fetch_user_data(self):
-        query = "SELECT \"Username\", \"Name\", \"Email\", \"Password\" FROM public.\"user\""
+        query = "SELECT \"username\", \"name\", \"email\", \"password\" FROM public.\"user\""
         fetched_data = self.db.get_request(query)
 
         user_credentials = {'usernames': {}}
@@ -29,10 +29,10 @@ class AuthenticatorConfigurator:
             connection = self.db.create_connection()
             cursor = connection.cursor()
             try:
-                cursor.execute("SELECT COUNT(*) FROM public.\"user\" WHERE \"Username\" = %s OR \"Email\" = %s;", (username, email))
+                cursor.execute("SELECT COUNT(*) FROM public.\"user\" WHERE \"username\" = %s OR \"email\" = %s;", (username, email))
                 existing_user_count = cursor.fetchone()[0]
 
-                cursor.execute("SELECT COUNT(*) FROM public.\"user\" WHERE \"Email\" = %s;", (email,))
+                cursor.execute("SELECT COUNT(*) FROM public.\"user\" WHERE \"email\" = %s;", (email,))
                 existing_email_count = cursor.fetchone()[0]
 
                 if not username or not name or not email or not password:
@@ -74,7 +74,7 @@ class AuthenticatorConfigurator:
                 else:
                     registration_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     hashed_passwords = stauth.Hasher([password]).generate()
-                    insert_user_query = """INSERT INTO public."user" ("Username", "Name", "Type_User", "Password", "Email", "Registration_Date") 
+                    insert_user_query = """INSERT INTO public."user" ("username", "name", "type_user", "password", "email", "registration_date") 
                     VALUES (%s, %s, %s, %s, %s, %s);"""
                     cursor.execute(insert_user_query, (username, name, user_type, hashed_passwords[0], email, registration_date))                
                     success = st.success("Registrace proběhla úspěšně. Nyní se můžete přihlásit.")
@@ -85,7 +85,7 @@ class AuthenticatorConfigurator:
                 connection.close()
 
     def get_user_type(self, username):
-        select_query = "SELECT \"ID\", \"Username\", \"Name\", \"Type_User\", \"Password\", \"Email\", \"Registration_Date\" FROM public.\"user\""
+        select_query = "SELECT \"id\", \"username\", \"name\", \"type_user\", \"password\", \"email\", \"registration_date\" FROM public.\"user\""
         user_data = self.db.get_request(select_query)
         
         column_names = ["ID", "Username", "Name", "Type_User", "Password", "Email", "Registration_Date"]
