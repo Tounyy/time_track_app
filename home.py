@@ -91,6 +91,20 @@ elif navigation_choice == "Authenticated":
                         time.sleep(1.2)
                         success.empty()
 
+    with tab2:
+        with st.form("Delete_task_form", clear_on_submit=True):
+            st.subheader("Smazat task")
+
+            admin_tasks_df_1 = task_requests.get_user_tasks_summary(username)
+            st.dataframe(admin_tasks_df_1, hide_index=True, use_container_width=True)        
+
+            admin_tasks_df = task_requests.get_user_tasks(username)
+            selected_task = st.selectbox("Vyberte task ke smazání", admin_tasks_df["Task"])
+            delete_button = st.form_submit_button("Smazat")
+            
+            if delete_button:
+                delete_success = task_requests.delete_task(selected_task, delete_button)
+
     with tab3:
         with st.form("Confirm_form", clear_on_submit=True):
             st.subheader("Potvrzení a odstranění potvrzení")
@@ -108,7 +122,7 @@ elif navigation_choice == "Authenticated":
             available_tasks_2 = task_requests.process_tasks_for_remove_confirmation(user_type)
             selected_task2 = st.selectbox("Vyberte task k odstranění potvrzení", available_tasks_2)
 
-            if st.form_submit_button("Odstranit"):
+            if st.form_submit_button("Odstranit potvrzení"):
                 task_requests.remove_confirmation(selected_task2, user_type)
                 success = st.success(f"Potvrzení bylo odstraněno pro úkol '{selected_task2}'.")
                 time.sleep(1.2)
@@ -116,5 +130,5 @@ elif navigation_choice == "Authenticated":
                 st.experimental_rerun()
 
     authenticator.logout("Logout")
-    st.write(username)
-    st.write(user_type)
+    st.write(f"username: {username}")
+    st.write(f"user type: {user_type}")

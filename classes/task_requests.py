@@ -54,13 +54,6 @@ class TaskRequests:
         select_query = "SELECT * FROM public.tasks"
         return self.db.get_request(select_query)
 
-    def confirm_task(self, task_name, user_type):
-        if user_type == 'Agency':
-            update_query = "UPDATE public.tasks SET \"Agency_input_task\" = 'confirm' WHERE \"Tasks\" = %s;"
-        elif user_type == 'Customer':
-            update_query = "UPDATE public.tasks SET \"Customer_input_task\" = 'confirm' WHERE \"Tasks\" = %s;"
-        self.db.execute_query(update_query, (task_name,))
-
     def process_tasks_for_confirmation(self, user_type):
         tasks_data = self.fetch_tasks()
         tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "Tracking_time_tasks", "Start_time_of_tracking", "Stop_time_of_tracking", "User", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
@@ -71,13 +64,6 @@ class TaskRequests:
             available_tasks = tasks_df.loc[tasks_df["Customer_input_task"] != 'confirm', "Task"]
 
         return available_tasks
-
-    def remove_confirmation(self, task_name, user_type):
-        if user_type == 'Agency':
-            update_query = "UPDATE public.tasks SET \"Agency_input_task\" = NULL WHERE \"Tasks\" = %s;"
-        elif user_type == 'Customer':
-            update_query = "UPDATE public.tasks SET \"Customer_input_task\" = NULL WHERE \"Tasks\" = %s;"
-        self.db.execute_query(update_query, (task_name,))
     
     def process_tasks_for_remove_confirmation(self, user_type):
         tasks_data = self.fetch_tasks()
@@ -89,3 +75,45 @@ class TaskRequests:
             available_tasks_2 = tasks_df.loc[tasks_df["Customer_input_task"] == 'confirm', "Task"]
 
         return available_tasks_2
+
+    def confirm_task(self, task_name, user_type):
+        if user_type == 'Agency':
+            update_query = "UPDATE public.tasks SET \"Agency_input_task\" = 'confirm' WHERE \"Tasks\" = %s;"
+        elif user_type == 'Customer':
+            update_query = "UPDATE public.tasks SET \"Customer_input_task\" = 'confirm' WHERE \"Tasks\" = %s;"
+        self.db.execute_query(update_query, (task_name,))
+
+    def remove_confirmation(self, task_name, user_type):
+        if user_type == 'Agency':
+            update_query = "UPDATE public.tasks SET \"Agency_input_task\" = NULL WHERE \"Tasks\" = %s;"
+        elif user_type == 'Customer':
+            update_query = "UPDATE public.tasks SET \"Customer_input_task\" = NULL WHERE \"Tasks\" = %s;"
+        self.db.execute_query(update_query, (task_name,))
+    
+    def get_user_tasks(self, username):
+        tasks_data = self.fetch_tasks()
+        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "Tracking_time_tasks", "Start_time_of_tracking", "Stop_time_of_tracking", "User", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
+        admin_tasks_df = tasks_df[tasks_df['User'] == username]
+        
+        return admin_tasks_df
+    
+    def get_user_tasks_summary(self, username):
+        tasks_data = self.fetch_tasks()
+        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "Tracking_time_tasks", "Start_time_of_tracking", "Stop_time_of_tracking", "User", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
+        tasks_df.drop(columns=['Tracking_time_tasks', 'Start_time_of_tracking', 'Stop_time_of_tracking', 'Customer_input_task', 'Agency_input_task'], inplace=True)
+        admin_tasks_df_1 = tasks_df[tasks_df['User'] == username]
+        admin_tasks_df_1.drop(columns=['User'], inplace=True)
+        return admin_tasks_df_1
+    
+    def delete_task(self, selected_task, delete_button):
+        if delete_button and selected_task:  
+            delete_query = "DELETE FROM tasks WHERE \"Tasks\" = %s;"
+            self.db.execute_query(delete_query, (selected_task,))
+            success = st.success(f"Úkol '{selected_task}' je smazán z databáze.")
+            time.sleep(2)    
+            success.empty()        
+            st.experimental_rerun()
+        elif not selected_task and delete_button: 
+            warning = st.warning("Není žádný task k smazání.")
+            time.sleep(2)
+            warning.empty()
