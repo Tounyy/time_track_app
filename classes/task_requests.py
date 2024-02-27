@@ -3,6 +3,7 @@ from classes.users import AuthenticatorConfigurator
 from datetime import datetime
 import time
 import streamlit as st 
+import pandas as pd
 
 class TaskRequests:
     def __init__(self):
@@ -48,3 +49,43 @@ class TaskRequests:
             insert_query = "INSERT INTO public.tasks (\"Tasks\", \"MD\", \"Currency\", \"User\", \"User_type_input_task\") VALUES (%s, %s, %s, %s, %s);"
             self.db.execute_query(insert_query, (task_name, money_md, selected_currency, self.username, self.user_type))
             return f"Úkol '{task_name}' byl úspěšně uložen do databáze."
+
+    def fetch_tasks(self):
+        select_query = "SELECT * FROM public.tasks"
+        return self.db.get_request(select_query)
+
+    def confirm_task(self, task_name, user_type):
+        if user_type == 'Agency':
+            update_query = "UPDATE public.tasks SET \"Agency_input_task\" = 'confirm' WHERE \"Tasks\" = %s;"
+        elif user_type == 'Customer':
+            update_query = "UPDATE public.tasks SET \"Customer_input_task\" = 'confirm' WHERE \"Tasks\" = %s;"
+        self.db.execute_query(update_query, (task_name,))
+
+    def process_tasks_for_confirmation(self, user_type):
+        tasks_data = self.fetch_tasks()
+        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "Tracking_time_tasks", "Start_time_of_tracking", "Stop_time_of_tracking", "User", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
+        
+        if user_type == 'Agency':
+            available_tasks = tasks_df.loc[tasks_df["Agency_input_task"] != 'confirm', "Task"]
+        elif user_type == 'Customer':
+            available_tasks = tasks_df.loc[tasks_df["Customer_input_task"] != 'confirm', "Task"]
+
+        return available_tasks
+
+    def remove_confirmation(self, task_name, user_type):
+        if user_type == 'Agency':
+            update_query = "UPDATE public.tasks SET \"Agency_input_task\" = NULL WHERE \"Tasks\" = %s;"
+        elif user_type == 'Customer':
+            update_query = "UPDATE public.tasks SET \"Customer_input_task\" = NULL WHERE \"Tasks\" = %s;"
+        self.db.execute_query(update_query, (task_name,))
+    
+    def process_tasks_for_remove_confirmation(self, user_type):
+        tasks_data = self.fetch_tasks()
+        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "Tracking_time_tasks", "Start_time_of_tracking", "Stop_time_of_tracking", "User", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
+        
+        if user_type == 'Agency':
+            available_tasks_2 = tasks_df.loc[tasks_df["Agency_input_task"] == 'confirm', "Task"]
+        elif user_type == 'Customer':
+            available_tasks_2 = tasks_df.loc[tasks_df["Customer_input_task"] == 'confirm', "Task"]
+
+        return available_tasks_2
