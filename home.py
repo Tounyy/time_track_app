@@ -67,8 +67,8 @@ elif navigation_choice == "Authenticated":
     else:
         user_type = task_requests.user_type
 
-
-    tab1, tab2, tab3, tab4 = st.tabs(["Přidat task", "Smazat task", "Potvrdit task", "Zobrazit tabulku s časem"])
+    if user_type == 'Agency' or user_type == 'Customer':
+        tab1, tab2, tab3, tab4 = st.tabs(["Přidat task", "Smazat task", "Potvrdit task", "Zobrazit tabulku s časem"])
 
     with tab1:
         with st.form("Add_task_form", clear_on_submit=True):
@@ -95,8 +95,9 @@ elif navigation_choice == "Authenticated":
         with st.form("Delete_task_form", clear_on_submit=True):
             st.subheader("Smazat task")
 
-            admin_tasks_df_1 = task_requests.get_user_tasks_summary(username)
-            st.dataframe(admin_tasks_df_1, hide_index=True, use_container_width=True)        
+            admin_tasks_df = task_requests.get_user_tasks_summary(username)
+            admin_tasks_df_sorted = admin_tasks_df.sort_values(by='ID')
+            st.dataframe(admin_tasks_df_sorted, hide_index=True, use_container_width=True)        
 
             admin_tasks_df = task_requests.get_user_tasks(username)
             selected_task = st.selectbox("Vyberte task ke smazání", admin_tasks_df["Task"])
@@ -111,23 +112,20 @@ elif navigation_choice == "Authenticated":
 
             available_tasks = task_requests.process_tasks_for_confirmation(user_type)
             selected_task = st.selectbox("Vyberte task k potvrzení", available_tasks)
+            confirmation_btn = st.form_submit_button("Potvrdit")
 
-            if st.form_submit_button("Potvrdit"):
-                task_requests.confirm_task(selected_task, user_type)
-                success = st.success(f"Potvrzení bylo odesláno pro úkol '{selected_task}'.")
-                time.sleep(1.2)
-                success.empty()
-                st.experimental_rerun()
+            if confirmation_btn:
+                task_requests.confirm_task(selected_task, user_type, confirmation_btn, selected_task)
             
             available_tasks_2 = task_requests.process_tasks_for_remove_confirmation(user_type)
             selected_task2 = st.selectbox("Vyberte task k odstranění potvrzení", available_tasks_2)
+            remove_confirmation_btn = st.form_submit_button("Odstranit potvrzení")
 
-            if st.form_submit_button("Odstranit potvrzení"):
-                task_requests.remove_confirmation(selected_task2, user_type)
-                success = st.success(f"Potvrzení bylo odstraněno pro úkol '{selected_task2}'.")
-                time.sleep(1.2)
-                success.empty()
-                st.experimental_rerun()
+            if remove_confirmation_btn:
+                task_requests.remove_confirmation(selected_task2, user_type, remove_confirmation_btn, selected_task2)
+
+    if user_type == 'Worker':
+        tab1, tab2 = st.tabs(["a1", "a2"])
 
     authenticator.logout("Logout")
     st.write(f"username: {username}")
