@@ -28,7 +28,8 @@ else:
     navigation_choice = "Authenticated"
 
 if navigation_choice == "Login":
-    name, authentication_status, username = authenticator.login('Login', 'main')
+    fields = {}  
+    name, authentication_status, username = authenticator.login(**fields)
 
     if st.session_state.get("authentication_status") is False:
         warning_message = st.warning('Uživatelské jméno/heslo je nesprávné nebo je prázdné')
