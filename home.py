@@ -71,62 +71,73 @@ elif navigation_choice == "Authenticated":
     if user_type == 'Agency' or user_type == 'Customer':
         tab1, tab2, tab3, tab4 = st.tabs(["Přidat task", "Smazat task", "Potvrdit task", "Zobrazit tabulku s časem"])
 
-    with tab1:
-        with st.form("Add_task_form", clear_on_submit=True):
-            st.subheader("Přidat task")
-            task_name = st.text_input("Název tasku")
-            money_MD = st.number_input("Zadej částku peněz", min_value=1)
-            currency_options = ["CZK", "USD", "EUR"]
-            selected_currency = st.selectbox("Vyber měnu", currency_options)
-            submit_button_add = st.form_submit_button("Uložit do databáze")
+        with tab1:
+            with st.form("Add_task_form", clear_on_submit=True):
+                st.subheader("Přidat task")
+                task_name = st.text_input("Název tasku")
+                money_MD = st.number_input("Zadej částku peněz", min_value=1)
+                currency_options = ["CZK", "USD", "EUR"]
+                selected_currency = st.selectbox("Vyber měnu", currency_options)
+                submit_button_add = st.form_submit_button("Uložit do databáze")
 
-            if submit_button_add:
-                if task_name.strip() == "":
-                    warning = st.warning("Název tasku je povinný. Prosím, doplňte ho.")
-                    time.sleep(2)
-                    warning.empty()
-                else:
-                    message = task_requests.add_task(task_name, money_MD, selected_currency)
-                    if message:
-                        success = st.success(message)
-                        time.sleep(1.2)
-                        success.empty()
+                if submit_button_add:
+                    if task_name.strip() == "":
+                        warning = st.warning("Název tasku je povinný. Prosím, doplňte ho.")
+                        time.sleep(2)
+                        warning.empty()
+                    else:
+                        message = task_requests.add_task(task_name, money_MD, selected_currency)
+                        if message:
+                            success = st.success(message)
+                            time.sleep(1.2)
+                            success.empty()
 
-    with tab2:
-        with st.form("Delete_task_form", clear_on_submit=True):
-            st.subheader("Smazat task")
+        with tab2:
+            with st.form("Delete_task_form", clear_on_submit=True):
+                st.subheader("Smazat task")
 
-            admin_tasks_df = task_requests.get_user_tasks_summary(username)
-            admin_tasks_df_sorted = admin_tasks_df.sort_values(by='ID')
-            st.dataframe(admin_tasks_df_sorted, hide_index=True, use_container_width=True)        
+                admin_tasks_df = task_requests.get_user_tasks_summary(username)
+                admin_tasks_df_sorted = admin_tasks_df.sort_values(by='ID')
+                st.dataframe(admin_tasks_df_sorted, hide_index=True, use_container_width=True)        
 
-            admin_tasks_df = task_requests.get_user_tasks(username)
-            selected_task = st.selectbox("Vyberte task ke smazání", admin_tasks_df["Task"])
-            delete_button = st.form_submit_button("Smazat")
-            
-            if delete_button:
-                delete_success = task_requests.delete_task(selected_task, delete_button)
+                admin_tasks_df = task_requests.get_user_tasks(username)
+                selected_task = st.selectbox("Vyberte task ke smazání", admin_tasks_df["Task"])
+                delete_button = st.form_submit_button("Smazat")
+                
+                if delete_button:
+                    delete_success = task_requests.delete_task(selected_task, delete_button)
 
-    with tab3:
-        with st.form("Confirm_form", clear_on_submit=True):
-            st.subheader("Potvrzení a odstranění potvrzení")
+        with tab3:
+            with st.form("Confirm_form", clear_on_submit=True):
+                st.subheader("Potvrzení a odstranění potvrzení")
 
-            available_tasks = task_requests.process_tasks_for_confirmation(user_type)
-            selected_task = st.selectbox("Vyberte task k potvrzení", available_tasks)
-            confirmation_btn = st.form_submit_button("Potvrdit")
+                available_tasks = task_requests.process_tasks_for_confirmation(user_type)
+                selected_task = st.selectbox("Vyberte task k potvrzení", available_tasks)
+                confirmation_btn = st.form_submit_button("Potvrdit")
 
-            if confirmation_btn:
-                task_requests.confirm_task(selected_task, user_type, confirmation_btn, selected_task)
-            
-            available_tasks_2 = task_requests.process_tasks_for_remove_confirmation(user_type)
-            selected_task2 = st.selectbox("Vyberte task k odstranění potvrzení", available_tasks_2)
-            remove_confirmation_btn = st.form_submit_button("Odstranit potvrzení")
+                if confirmation_btn:
+                    task_requests.confirm_task(selected_task, user_type, confirmation_btn, selected_task)
+                
+                available_tasks_2 = task_requests.process_tasks_for_remove_confirmation(user_type)
+                selected_task2 = st.selectbox("Vyberte task k odstranění potvrzení", available_tasks_2)
+                remove_confirmation_btn = st.form_submit_button("Odstranit potvrzení")
 
-            if remove_confirmation_btn:
-                task_requests.remove_confirmation(selected_task2, user_type, remove_confirmation_btn, selected_task2)
+                if remove_confirmation_btn:
+                    task_requests.remove_confirmation(selected_task2, user_type, remove_confirmation_btn, selected_task2)
 
-    if user_type == 'Worker':
-        tab1, tab2 = st.tabs(["a1", "a2"])
+    elif user_type == 'Worker':
+        tab1, tab2 = st.tabs(["Přijetí tasku", "a2"])
+    
+        with tab1:
+            with st.form("worker_form", clear_on_submit=True):
+                st.subheader("Přijetí tasku")
+
+                selected_pre_df = task_requests.select_and_track_task() 
+                selected_task_display = st.selectbox("Vyberte task", selected_pre_df["Task"])
+                approval_btn = st.form_submit_button("Přijmout úkol")
+
+                if approval_btn:
+                    task_requests.update_tasks_to_pending(selected_task_display, approval_btn, username)
 
     authenticator.logout("Logout")
     st.write(f"username: {username}")

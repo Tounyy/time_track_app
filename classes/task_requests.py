@@ -16,6 +16,15 @@ class TaskRequests:
             self.username = None
             self.user_type = None
 
+    def fetch_tasks(self):
+        select_query = "SELECT * FROM public.tasks"
+        return self.db.get_request(select_query)
+
+    def generate_tasks_df(self):
+        tasks_data = self.fetch_tasks()
+        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "User_input_task", "MD", "Currency", "Customer_confirm_task", "Agency_confirm_task", "User_type_input_task", "Approval_Status", "Assigned_Worker"])
+        return tasks_df
+
     def task_exists_for_user_type(self, task_name, user_type):
         check_user_type_query = "SELECT COUNT(*) FROM public.tasks WHERE \"tasks\" = %s AND \"user_type_input_task\" = %s;"
         result = self.db.get_request(check_user_type_query, (task_name, user_type))
@@ -50,40 +59,34 @@ class TaskRequests:
             self.db.execute_query(insert_query, (task_name, money_md, selected_currency, self.username, self.user_type))
             return f"Úkol '{task_name}' byl úspěšně uložen do databáze."
 
-    def fetch_tasks(self):
-        select_query = "SELECT * FROM public.tasks"
-        return self.db.get_request(select_query)
-
     def process_tasks_for_confirmation(self, user_type):
-        tasks_data = self.fetch_tasks()
-        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "User_input_task", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
+        tasks_df = self.generate_tasks_df() 
         filtered_tasks_df_sorted = tasks_df.sort_values(by='ID')
 
         if user_type == 'Agency':
-            available_tasks = filtered_tasks_df_sorted.loc[filtered_tasks_df_sorted["Agency_input_task"] != 'confirm', "Task"]
+            available_tasks = filtered_tasks_df_sorted.loc[filtered_tasks_df_sorted["Agency_confirm_task"] != 'confirm', "Task"]
         elif user_type == 'Customer':
-            available_tasks = filtered_tasks_df_sorted.loc[filtered_tasks_df_sorted["Customer_input_task"] != 'confirm', "Task"]
+            available_tasks = filtered_tasks_df_sorted.loc[filtered_tasks_df_sorted["Customer_confirm_task"] != 'confirm', "Task"]
 
         return available_tasks
     
     def process_tasks_for_remove_confirmation(self, user_type):
-        tasks_data = self.fetch_tasks()
-        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "User_input_task", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
+        tasks_df = self.generate_tasks_df()         
         filtered_tasks_df_sorted_2 = tasks_df.sort_values(by='ID')
 
         if user_type == 'Agency':
-            available_tasks_2 = filtered_tasks_df_sorted_2.loc[filtered_tasks_df_sorted_2["Agency_input_task"] == 'confirm', "Task"]
+            available_tasks_2 = filtered_tasks_df_sorted_2.loc[filtered_tasks_df_sorted_2["Agency_confirm_task"] == 'confirm', "Task"]
         elif user_type == 'Customer':
-            available_tasks_2 = filtered_tasks_df_sorted_2.loc[filtered_tasks_df_sorted_2["Customer_input_task"] == 'confirm', "Task"]
+            available_tasks_2 = filtered_tasks_df_sorted_2.loc[filtered_tasks_df_sorted_2["Customer_confirm_task"] == 'confirm', "Task"]
 
         return available_tasks_2
 
     def confirm_task(self, task_name, user_type, confirmation_btn, selected_task):
         if confirmation_btn and selected_task:  
             if user_type == 'Agency':
-                update_query = "UPDATE public.tasks SET \"agency_input_task\" = 'confirm' WHERE \"tasks\" = %s;"
+                update_query = "UPDATE public.tasks SET \"agency_confirm_task\" = 'confirm' WHERE \"tasks\" = %s;"
             elif user_type == 'Customer':
-                update_query = "UPDATE public.tasks SET \"customer_input_task\" = 'confirm' WHERE \"tasks\" = %s;"
+                update_query = "UPDATE public.tasks SET \"customer_confirm_task\" = 'confirm' WHERE \"tasks\" = %s;"
             self.db.execute_query(update_query, (task_name,))
             success = st.success(f"Potvrzení bylo odesláno pro úkol '{selected_task}'.")
             time.sleep(1.2)
@@ -97,9 +100,9 @@ class TaskRequests:
     def remove_confirmation(self, task_name, user_type, remove_confirmation_btn, selected_task2):
         if remove_confirmation_btn and selected_task2:  
             if user_type == 'Agency':
-                update_query = "UPDATE public.tasks SET \"agency_input_task\" = NULL WHERE \"tasks\" = %s;"
+                update_query = "UPDATE public.tasks SET \"agency_confirm_task\" = NULL WHERE \"tasks\" = %s;"
             elif user_type == 'Customer':
-                update_query = "UPDATE public.tasks SET \"customer_input_task\" = NULL WHERE \"tasks\" = %s;"
+                update_query = "UPDATE public.tasks SET \"customer_confirm_task\" = NULL WHERE \"tasks\" = %s;"
             self.db.execute_query(update_query, (task_name,))
             success = st.success(f"Potvrzení bylo odstraněno pro úkol '{selected_task2}'.")
             time.sleep(1.2)
@@ -111,16 +114,14 @@ class TaskRequests:
             warning.empty()
     
     def get_user_tasks(self, username):
-        tasks_data = self.fetch_tasks()
-        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "User_input_task", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
+        tasks_df = self.generate_tasks_df() 
         admin_tasks_df = tasks_df[tasks_df['User_input_task'] == username]
         
         return admin_tasks_df
     
     def get_user_tasks_summary(self, username):
-        tasks_data = self.fetch_tasks()
-        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "User_input_task", "MD", "Currency", "Customer_input_task", "Agency_input_task", "User_type_input_task"])
-        tasks_df.drop(columns=['Customer_input_task', 'Agency_input_task'], inplace=True)
+        tasks_df = self.generate_tasks_df() 
+        tasks_df.drop(columns=['Customer_confirm_task', 'Agency_confirm_task'], inplace=True)
         admin_tasks_df_1 = tasks_df[tasks_df['User_input_task'] == username]
         admin_tasks_df_1.drop(columns=['User_input_task'], inplace=True)
         return admin_tasks_df_1
@@ -135,5 +136,36 @@ class TaskRequests:
             st.experimental_rerun()
         elif not selected_task and delete_button: 
             warning = st.warning("Není žádný task k smazání.")
+            time.sleep(2)
+            warning.empty()
+
+    def select_and_track_task(self):
+        tasks_df = self.generate_tasks_df() 
+        fill_tasks_df_sorted = tasks_df.sort_values(by='ID')
+        select_df = fill_tasks_df_sorted.loc[
+            (fill_tasks_df_sorted["Customer_confirm_task"] == 'confirm') & 
+            (fill_tasks_df_sorted["Agency_confirm_task"] == 'confirm') & 
+            (fill_tasks_df_sorted["Approval_Status"].isnull()), ['ID', 'Task']
+        ]
+
+        return select_df
+    
+    def update_tasks_to_pending(self, selected_task_display, approval_btn, username):
+        if approval_btn and selected_task_display:
+            update_query = """
+            UPDATE public.tasks
+            SET \"approval_status\" = 'Pending', \"assigned_worker\" = %s
+            WHERE \"approval_status\" IS NULL
+            AND \"assigned_worker\" IS NULL
+            AND \"customer_confirm_task\" = 'confirm'
+            AND \"agency_confirm_task\" = 'confirm';
+            """
+            self.db.execute_query(update_query, (username,))
+            success = st.success(f"Úkol '{selected_task_display}' byl aktualizován na čekající schválení a přiřazen pracovníkovi {username}.")
+            time.sleep(2)
+            success.empty()
+            st.experimental_rerun()
+        elif not selected_task_display and approval_btn: 
+            warning = st.warning("Není žádný úkol k schválení.")
             time.sleep(2)
             warning.empty()
