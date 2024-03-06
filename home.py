@@ -2,6 +2,8 @@ from classes.users import AuthenticatorConfigurator
 from classes.task_requests import TaskRequests
 import streamlit_authenticator as stauth
 import streamlit as st
+from datetime import datetime, timedelta  
+from classes.style import CustomCSS
 import time
 
 auth_configurator = AuthenticatorConfigurator()
@@ -67,9 +69,9 @@ elif navigation_choice == "Authenticated":
         error.empty()
     else:
         user_type = task_requests.user_type
-
+    
     if user_type == 'Agency' or user_type == 'Customer':
-        tab1, tab2, tab3, tab4 = st.tabs(["Přidat task", "Smazat task", "Potvrdit task", "Zobrazit tabulku s časem"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Přidat task", "Smazat task", "Potvrdit task", "Zobrazit tabulku s časem", "Potvrdit worker"])
 
         with tab1:
             with st.form("Add_task_form", clear_on_submit=True):
@@ -125,8 +127,41 @@ elif navigation_choice == "Authenticated":
                 if remove_confirmation_btn:
                     task_requests.remove_confirmation(selected_task2, user_type, remove_confirmation_btn, selected_task2)
 
+        with tab5:
+            with st.form("worker_form", clear_on_submit=True):
+                st.subheader("Schválení worker pro zahájení práce")
+
+                selected_pre_df_approved = task_requests.select_pending_status() 
+                selected_task_display_approved = st.selectbox("Vyberte úkol k schválení", selected_pre_df_approved["Task"])
+
+                filtered_df = selected_pre_df_approved.loc[selected_pre_df_approved['Task'] == selected_task_display_approved, 'Assigned_Worker']
+                if not filtered_df.empty:
+                    assigned_worker = filtered_df.iloc[0]
+                    st.write(f"Vybraný úkol bude přiřazen pracovníku: {assigned_worker}")
+                else:
+                    st.write("Není žádný úkol k schválení")
+                
+                approval_btn_approved = st.form_submit_button("Schválit")
+
+                if approval_btn_approved:
+                    task_requests.update_tasks_to_approved(selected_task_display_approved, approval_btn_approved)
+
+                selected_pre_df_revoked = task_requests.select_approval_status()
+                selected_task_display_revoked = st.selectbox("Vyberte schválený úkol k odebrání", selected_pre_df_revoked["Task"])
+                revoke_approval_btn = st.form_submit_button("Odebrat schválení")
+
+                if revoke_approval_btn:
+                    task_requests.revoke_task_approval(selected_task_display_revoked, revoke_approval_btn)
+
     elif user_type == 'Worker':
-        tab1, tab2 = st.tabs(["Přijetí tasku", "a2"])
+        reload_script = """
+        <script>
+        window.location.href = window.location.href;
+        </script>
+        """
+        st.markdown(reload_script, unsafe_allow_html=True)
+
+        tab1, tab2 = st.tabs(["Přijetí tasku", "Time Track"])
     
         with tab1:
             with st.form("worker_form", clear_on_submit=True):
@@ -139,6 +174,10 @@ elif navigation_choice == "Authenticated":
                 if approval_btn:
                     task_requests.update_tasks_to_pending(selected_task_display, approval_btn, username)
 
-    authenticator.logout("Logout")
-    st.write(f"username: {username}")
-    st.write(f"user type: {user_type}")
+    custom_css = CustomCSS.get_button_styles()
+    st.markdown(custom_css, unsafe_allow_html=True)
+
+    with st.expander("Správa účtu"):
+        st.write(f"Username: {username}")
+        st.write(f"User type: {user_type}")
+        authenticator.logout("Logout")

@@ -1,6 +1,6 @@
 from classes.connector import Database
 from classes.users import AuthenticatorConfigurator
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import streamlit as st 
 import pandas as pd
@@ -22,7 +22,8 @@ class TaskRequests:
 
     def generate_tasks_df(self):
         tasks_data = self.fetch_tasks()
-        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "User_input_task", "MD", "Currency", "Customer_confirm_task", "Agency_confirm_task", "User_type_input_task", "Approval_Status", "Assigned_Worker"])
+        tasks_df = pd.DataFrame(tasks_data, columns=["ID", "Task", "User_input_task", "MD", "Currency", "Customer_confirm_task", "Agency_confirm_task", "User_type_input_task", "Approval_Status", "Assigned_Worker", "Time_start_of_tracking", "Time_stop_of_tracking", "Time_track"
+    ])
         return tasks_df
 
     def task_exists_for_user_type(self, task_name, user_type):
@@ -166,6 +167,62 @@ class TaskRequests:
             success.empty()
             st.experimental_rerun()
         elif not selected_task_display and approval_btn: 
+            warning = st.warning("Není žádný úkol k přijetí.")
+            time.sleep(2)
+            warning.empty()
+
+    def select_approval_status(self):
+        tasks_df = self.generate_tasks_df() 
+        fill_tasks_df_sorted = tasks_df.sort_values(by='ID')
+        select_df = fill_tasks_df_sorted.loc[
+            (fill_tasks_df_sorted["Approval_Status"] == 'Approved')
+        ]
+
+        return select_df
+    
+    def select_pending_status(self):
+        tasks_df = self.generate_tasks_df() 
+        fill_tasks_df_sorted = tasks_df.sort_values(by='ID')
+        select_df = fill_tasks_df_sorted.loc[
+            (fill_tasks_df_sorted["Approval_Status"] == 'Pending')
+        ]
+
+        return select_df
+    
+    def update_tasks_to_approved(self, selected_task_display_approved, approval_btn_approved):
+        if approval_btn_approved and selected_task_display_approved:
+            update_query = """
+            UPDATE public.tasks
+            SET approval_status = 'Approved'
+            WHERE approval_status = 'Pending'
+            AND customer_confirm_task = 'confirm'
+            AND agency_confirm_task = 'confirm';
+            """
+            self.db.execute_query(update_query)
+            success = st.success(f"Úkol '{selected_task_display_approved}' byl aktualizován na schválený.")
+            time.sleep(2)
+            success.empty()
+            st.experimental_rerun()
+        elif not selected_task_display_approved and approval_btn_approved: 
             warning = st.warning("Není žádný úkol k schválení.")
+            time.sleep(2)
+            warning.empty()
+
+    def revoke_task_approval(self, selected_task_display_revoked, revoke_approval_btn):
+        if revoke_approval_btn and selected_task_display_revoked:
+            update_query = """
+            UPDATE public.tasks
+            SET approval_status = NULL, assigned_worker = NULL
+            WHERE approval_status = 'Approved'
+            AND customer_confirm_task = 'confirm'
+            AND agency_confirm_task = 'confirm';
+            """
+            self.db.execute_query(update_query)
+            success = st.success(f"Schválení úkolu '{selected_task_display_revoked}' bylo úspěšně odebráno.")
+            time.sleep(2)
+            success.empty()
+            st.experimental_rerun()
+        elif not selected_task_display_revoked and revoke_approval_btn: 
+            warning = st.warning("Není k dispozici žádný schválený úkol k odebrání.")
             time.sleep(2)
             warning.empty()
