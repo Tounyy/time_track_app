@@ -161,7 +161,7 @@ elif navigation_choice == "Authenticated":
         """
         st.markdown(reload_script, unsafe_allow_html=True)
 
-        tab1, tab2 = st.tabs(["Přijetí tasku", "Time Track"])
+        tab1, tab2 = st.tabs(["Přijetí tasku", "Time track"])
     
         with tab1:
             with st.form("worker_form", clear_on_submit=True):
@@ -174,8 +174,39 @@ elif navigation_choice == "Authenticated":
                 if approval_btn:
                     task_requests.update_tasks_to_pending(selected_task_display, approval_btn, username)
 
-    custom_css = CustomCSS.get_button_styles()
-    st.markdown(custom_css, unsafe_allow_html=True)
+        with tab2:
+                st.subheader("Time track")
+
+                selected_df_approved_time_track = task_requests.select_approval_status() 
+                
+                if selected_df_approved_time_track.empty:
+                    st.write("Není žádný schválený úkol k dispozici ke sledování.")
+                else:
+                    selected_task_display_time_track = st.selectbox("Vyberte task tracking time", selected_df_approved_time_track["Task"])
+
+                    if st.button("Start"):
+                        if selected_task_display_time_track:
+                            task_requests.start_tracking(selected_task_display_time_track)
+                            success = st.success("Sledování času zahájeno.")
+                            time.sleep(2)
+                            success.empty()
+                        else:
+                            warning = st.warning("Není vybrán žádný úkol k zahájení sledování.")
+                            time.sleep(2)
+                            warning.empty()
+
+                    if st.button("End"):
+                        if 'tracking_started' in st.session_state and st.session_state['tracking_started'].get(selected_task_display_time_track, False):
+                            task_requests.stop_tracking(selected_task_display_time_track)
+                            task_requests.calculate_time_spent(selected_task_display_time_track)
+                            st.session_state['tracking_started'][selected_task_display_time_track] = False
+                            success =st.success("Sledování času ukončeno.")
+                            time.sleep(2)
+                            success.empty()
+                        else:
+                            warning = st.warning("Není co ukončit. Sledování času nebylo zahájeno nebo již bylo ukončeno.")
+                            time.sleep(2)
+                            warning.empty()
 
     with st.expander("Správa účtu"):
         st.write(f"Username: {username}")

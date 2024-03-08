@@ -159,9 +159,10 @@ class TaskRequests:
             WHERE \"approval_status\" IS NULL
             AND \"assigned_worker\" IS NULL
             AND \"customer_confirm_task\" = 'confirm'
-            AND \"agency_confirm_task\" = 'confirm';
+            AND \"agency_confirm_task\" = 'confirm'
+            AND tasks = %s;
             """
-            self.db.execute_query(update_query, (username,))
+            self.db.execute_query(update_query, (username, selected_task_display,))
             success = st.success(f"Úkol '{selected_task_display}' byl aktualizován na čekající schválení a přiřazen pracovníkovi {username}.")
             time.sleep(2)
             success.empty()
@@ -175,7 +176,10 @@ class TaskRequests:
         tasks_df = self.generate_tasks_df() 
         fill_tasks_df_sorted = tasks_df.sort_values(by='ID')
         select_df = fill_tasks_df_sorted.loc[
-            (fill_tasks_df_sorted["Approval_Status"] == 'Approved')
+            (fill_tasks_df_sorted["Approval_Status"] == 'Approved') & 
+            fill_tasks_df_sorted["Time_start_of_tracking"].isna() & 
+            fill_tasks_df_sorted["Time_stop_of_tracking"].isna() & 
+            fill_tasks_df_sorted["Time_track"].isna()
         ]
 
         return select_df
@@ -184,11 +188,14 @@ class TaskRequests:
         tasks_df = self.generate_tasks_df() 
         fill_tasks_df_sorted = tasks_df.sort_values(by='ID')
         select_df = fill_tasks_df_sorted.loc[
-            (fill_tasks_df_sorted["Approval_Status"] == 'Pending')
+            (fill_tasks_df_sorted["Approval_Status"] == 'Pending') & 
+            fill_tasks_df_sorted["Time_start_of_tracking"].isna() & 
+            fill_tasks_df_sorted["Time_stop_of_tracking"].isna() & 
+            fill_tasks_df_sorted["Time_track"].isna()
         ]
 
         return select_df
-    
+
     def update_tasks_to_approved(self, selected_task_display_approved, approval_btn_approved):
         if approval_btn_approved and selected_task_display_approved:
             update_query = """
@@ -196,9 +203,10 @@ class TaskRequests:
             SET approval_status = 'Approved'
             WHERE approval_status = 'Pending'
             AND customer_confirm_task = 'confirm'
-            AND agency_confirm_task = 'confirm';
+            AND agency_confirm_task = 'confirm'
+            AND tasks = %s;
             """
-            self.db.execute_query(update_query)
+            self.db.execute_query(update_query, (selected_task_display_approved,))
             success = st.success(f"Úkol '{selected_task_display_approved}' byl aktualizován na schválený.")
             time.sleep(2)
             success.empty()
@@ -213,11 +221,12 @@ class TaskRequests:
             update_query = """
             UPDATE public.tasks
             SET approval_status = NULL, assigned_worker = NULL
-            WHERE approval_status = 'Approved'
+            WHERE approval_status = 'Approved', 
             AND customer_confirm_task = 'confirm'
-            AND agency_confirm_task = 'confirm';
+            AND agency_confirm_task = 'confirm'
+            AND tasks = %s;
             """
-            self.db.execute_query(update_query)
+            self.db.execute_query(update_query, (selected_task_display_revoked,))
             success = st.success(f"Schválení úkolu '{selected_task_display_revoked}' bylo úspěšně odebráno.")
             time.sleep(2)
             success.empty()
@@ -226,3 +235,28 @@ class TaskRequests:
             warning = st.warning("Není k dispozici žádný schválený úkol k odebrání.")
             time.sleep(2)
             warning.empty()
+
+    def start_tracking(self, selected_task_display_time_track):
+        start_time = datetime.now().replace(microsecond=0)        
+        update_query = "UPDATE public.tasks SET \"time_start_of_tracking\" = %s WHERE \"tasks\" = %s;"
+        self.db.execute_query(update_query, (start_time, selected_task_display_time_track))
+
+    def stop_tracking(self, selected_task_display_time_track):
+        stop_time = datetime.now().replace(microsecond=0)  
+        update_query = "UPDATE public.tasks SET \"time_stop_of_tracking\" = %s WHERE \"tasks\" = %s;"
+        self.db.execute_query(update_query, (stop_time, selected_task_display_time_track))
+
+    def calculate_time_spent(self, selected_task_display_time_track):
+        select_query = "SELECT \"time_start_of_tracking\", \"time_stop_of_tracking\" FROM public.tasks WHERE \"tasks\" = %s;"
+        time_data = self.db.get_request(select_query, (selected_task_display_time_track,))
+        if time_data and time_data[0][0] and time_data[0][1]:
+            start, stop = time_data[0]
+            time_spent = stop - start  # Předpokládá se, že start a stop jsou objekty datetime
+            days, seconds = time_spent.days, time_spent.seconds
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            seconds = seconds % 60
+            
+            formatted_time_spent = f"{days} dnů, {hours} hodin, {minutes} minut, {seconds} sekund"
+            update_query = "UPDATE public.tasks SET \"time_track\" = %s WHERE \"tasks\" = %s;"
+            self.db.execute_query(update_query, (formatted_time_spent, selected_task_display_time_track,))
